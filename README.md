@@ -15,7 +15,7 @@
 * boost：filesystem，locale，regex
 * libfmt
 * wxWidgets
-* nolhmann
+* nolhmann json
 
 ## 当前进度
 
