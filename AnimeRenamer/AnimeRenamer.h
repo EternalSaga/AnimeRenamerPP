@@ -1,4 +1,4 @@
-// AnimeRenamer.h : Include file for standard system include files,
+﻿// AnimeRenamer.h : Include file for standard system include files,
 // or project specific include files.
 
 #pragma once
@@ -16,9 +16,12 @@ struct Resources
 {
 	const static std::vector<std::string> videoSuffix;
 	const static std::vector<std::string> subtitleSuffix;
+	
+	const static std::map<std::string, boost::regex> presetLanguageMap;
 	//用于集数提取
 	const static boost::regex presetAnimeRegxes;
-	const static std::map<std::string, boost::regex> presetLanguageMap;
+private:
+	
 };
 
 class AnimeRenamemer {
@@ -27,7 +30,8 @@ public:
 	void doRename();
 	void backUpPathes();
 	void restoreBackup(const fs::path& animePath);
-	std::vector<std::pair<fs::path, fs::path>> getPreviewResult() const;
+	void setRegex(const std::string& regRule);
+	std::vector<std::pair<fs::path, fs::path>> getPreviewResult();
 	AnimeRenamemer(const fs::path& animePath, const std::string& season, const std::string& animeName);
 private:
 	const fs::path animeRootPath;
@@ -38,4 +42,5 @@ private:
 	void checkResultValidation() const;
 	std::vector<std::pair<fs::path, fs::path>> animePaths_old_new;
 	std::vector<std::pair<fs::path, fs::path>> subtitlesPaths_old_new;
+	boost::regex reg;
 };

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <wx/wx.h>
 #include <string>
 #include <memory>
@@ -40,9 +40,10 @@ private:
 	
 	void onFileOpen(wxCommandEvent& event);
 
-	void previewButtonOnButtonClick(wxCommandEvent& event);
+	void onPreviewButton(wxCommandEvent& event);
 	void onRenameClick(wxCommandEvent& event);
 	void onRestoreBackUp(wxCommandEvent& event);
+	void onRegChoice(wxCommandEvent& event);
 	bool previewClicked = false;
 	wxString wpath;
 	std::unique_ptr<AnimeRenamemer> pRenamer;

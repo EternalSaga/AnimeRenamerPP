@@ -17,7 +17,7 @@ const std::map<std::string, boost::regex> Resources::presetLanguageMap = {
 };
 const std::string to_be_delete = "to_be_delete";
 const std::vector<std::string> Resources::videoSuffix{ ".mp4", ".mkv", ".rmvb", ".avi", ".flv", ".mov", ".wmv", ".mpeg", ".m4v" };
-const std::vector<std::string> Resources::subtitleSuffix{ ".srt",".ass",".sub",".ssa"};
+const std::vector<std::string> Resources::subtitleSuffix{ ".srt",".ass",".sub",".ssa" };
 //以[开头,以]结尾，且中括号都不包含，括号中间是1-3个数字
 //以[开头,以]结尾，且中括号都不包含，括号中间是SP+多个数字
 //1-3个数字
@@ -27,13 +27,11 @@ const boost::regex Resources::presetAnimeRegxes{
 	//R"((?<=S\d{2}E)(\d{2}))"
 };
 
-AnimeRenamemer::AnimeRenamemer(const fs::path& animePath, const std::string& season, const std::string& animeName):
+AnimeRenamemer::AnimeRenamemer(const fs::path& animePath, const std::string& season, const std::string& animeName) :
 	animeRootPath(animePath),
 	season(season),
-	animeName(animeName){
-
-	searchAnime();
-	searchSubtitles();
+	animeName(animeName) {
+	reg = Resources::presetAnimeRegxes;
 }
 
 std::string gbk2u8(const std::string gbkStr) {
@@ -53,7 +51,7 @@ std::string filterSmatch2Episode(const boost::smatch& episode) {
 			result = re.str();
 			break;
 		}
-		
+
 	}
 	if (episode.empty())
 	{
@@ -62,13 +60,35 @@ std::string filterSmatch2Episode(const boost::smatch& episode) {
 	return result;
 }
 
-std::vector<std::pair<fs::path, fs::path>> AnimeRenamemer::getPreviewResult() const
+std::vector<std::pair<fs::path, fs::path>> AnimeRenamemer::getPreviewResult()
 {
+	if (animePaths_old_new.empty())
+	{
+		searchAnime();
+		searchSubtitles();
+	}
 	checkResultValidation();
 	std::vector<std::pair<fs::path, fs::path>> animeNameSubList;
 	animeNameSubList.insert(animeNameSubList.end(), animePaths_old_new.begin(), animePaths_old_new.end());
 	animeNameSubList.insert(animeNameSubList.end(), subtitlesPaths_old_new.begin(), subtitlesPaths_old_new.end());
 	return animeNameSubList;
+}
+
+void AnimeRenamemer::setRegex(const std::string& regRule)
+{
+	if (regRule == "[集数]")
+	{
+		reg = boost::regex{ R"((?<=\[)\d{1,3}\.?5?(?=v??2??\]))" };
+	}
+	else if (regRule == "S季E集数") {
+		reg = boost::regex{ R"((?<=S\d{2}E)(\d{2}))" };
+	}
+	else if (regRule == "集数") {
+		reg = boost::regex{ R"((?<=\s)\d{1,3}(?=\s))" };
+	}
+	else {
+		reg = Resources::presetAnimeRegxes;
+	}
 }
 void AnimeRenamemer::searchAnime()
 {
@@ -82,7 +102,7 @@ void AnimeRenamemer::searchAnime()
 				fileName = gbk2u8(p.filename().string());
 			}
 			boost::smatch episodes;
-			boost::regex_search(fileName, episodes, Resources::presetAnimeRegxes);
+			boost::regex_search(fileName, episodes, reg);
 			const auto ep = filterSmatch2Episode(episodes);
 
 			const auto newFileName = fmt::format("{}-S{}E{}{}", animeName, season, ep, p.extension().string());
@@ -90,12 +110,12 @@ void AnimeRenamemer::searchAnime()
 			return std::pair<fs::path, fs::path>{p, newFilePath};
 		}) | view::filter([](const std::pair<fs::path, fs::path>& old_new) {
 			return old_new.second.string().find(to_be_delete);
-			
+
 			});
-	for (const auto& v: animesPathView)
-	{
-		animePaths_old_new.push_back(v);
-	}
+		for (const auto& v : animesPathView)
+		{
+			animePaths_old_new.push_back(v);
+		}
 }
 
 void AnimeRenamemer::searchSubtitles()
@@ -108,17 +128,20 @@ void AnimeRenamemer::searchSubtitles()
 				fileName = p.filename().string();
 			}
 			boost::smatch episodes;
-			boost::regex_search(fileName, episodes, Resources::presetAnimeRegxes);
+			boost::regex_search(fileName, episodes, reg);
 			const auto ep = filterSmatch2Episode(episodes);
 			std::string languageCode;
-			for (const auto& pair:Resources::presetLanguageMap)
+			for (const auto& pair : Resources::presetLanguageMap)
 			{
 				boost::smatch foundLanguage;
 				boost::regex_search(fileName, foundLanguage, pair.second);
-				if (foundLanguage.length()>0)
+				if (!foundLanguage.empty())
 				{
-					languageCode = pair.first;
-					break;
+					languageCode = filterSmatch2Episode(foundLanguage);
+					if (!languageCode.empty())
+					{
+						break;
+					}
 				}
 			}
 			const auto newFileName = fmt::format("{}-S{}E{}.{}{}", animeName, season, ep, languageCode, p.extension().string());
@@ -139,7 +162,7 @@ void AnimeRenamemer::checkResultValidation() const
 	}
 	std::set<std::string> animeNameSet;
 	int previewsSize = 0;
-	for (const auto animeNames: animePaths_old_new)
+	for (const auto animeNames : animePaths_old_new)
 	{
 		animeNameSet.emplace(animeNames.second.filename().generic_string());
 		if (previewsSize == animeNameSet.size())
@@ -180,7 +203,7 @@ void AnimeRenamemer::backUpPathes() {
 	fs::path writePath = pathes[0].first.parent_path() / "backup.json";
 
 
-	for (const auto& path:pathes)
+	for (const auto& path : pathes)
 	{
 		auto u8oldPath = boost::locale::conv::between(path.first.string(), "UTF-8", "GBK");
 		auto u8newPath = boost::locale::conv::between(path.second.string(), "UTF-8", "GBK");
@@ -198,7 +221,7 @@ void AnimeRenamemer::restoreBackup(const fs::path& animePath) {
 
 
 
-	const fs::path backupPath = animePath/"backup.json";
+	const fs::path backupPath = animePath / "backup.json";
 	std::ifstream ifs(backupPath.string());
 	if (ifs.fail())
 	{
@@ -222,7 +245,7 @@ void AnimeRenamemer::restoreBackup(const fs::path& animePath) {
 			{
 				fs::rename(newPath, oldPath);
 			}
-			
+
 		}
 	}
 	catch (json::parse_error& e) {

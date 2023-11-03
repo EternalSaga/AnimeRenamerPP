@@ -1,4 +1,4 @@
-#include "GetFiles.h"
+﻿#include "GetFiles.h"
 
 
 std::vector<fs::path> GetAllFiles(const fs::path& path, const std::vector<std::string>& extensions){
@@ -7,7 +7,7 @@ std::vector<fs::path> GetAllFiles(const fs::path& path, const std::vector<std::s
 
     if (fs::exists(path) && fs::is_directory(path)){
 
-        for (const auto& p : fs::recursive_directory_iterator(path)){
+        for (const auto& p : fs::directory_iterator (path)){
 
             if (fs::is_regular_file(p)){
 
