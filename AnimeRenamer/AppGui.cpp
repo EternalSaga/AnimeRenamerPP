@@ -58,7 +58,8 @@ AnimeRenamerFrame::AnimeRenamerFrame(wxWindow* parent, wxWindowID id, const wxSt
 	recoverButton = new wxButton(this, wxID_ANY, wxT("从备份恢复"), wxDefaultPosition, wxDefaultSize, 0);
 	leftHorizontalSizer->Add(recoverButton, 0, wxALL, 5);
 
-
+	resetButton = new wxButton(this, wxID_ANY, wxT("重置状态"), wxDefaultPosition, wxDefaultSize, 0);
+	leftHorizontalSizer->Add(resetButton, 0, wxALL, 5);
 
 	renamePreview = new wxDataViewListCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(1280, 720), 0);
 	renamePreview->AppendTextColumn(wxT("原始命名"));
@@ -77,6 +78,7 @@ AnimeRenamerFrame::AnimeRenamerFrame(wxWindow* parent, wxWindowID id, const wxSt
 	renameButton->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(AnimeRenamerFrame::onRenameClick), NULL, this);
 	recoverButton->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(AnimeRenamerFrame::onRestoreBackUp), NULL, this);
 	regxComboBox->Connect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(AnimeRenamerFrame::onRegChoice), NULL, this);
+	resetButton->Connect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(AnimeRenamerFrame::onReset), NULL, this);
 }
 
 AnimeRenamerFrame::~AnimeRenamerFrame()
@@ -85,6 +87,7 @@ AnimeRenamerFrame::~AnimeRenamerFrame()
 	previewButton->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(AnimeRenamerFrame::onPreviewButton), NULL, this);
 	renameButton->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(AnimeRenamerFrame::onRenameClick), NULL, this);
 	regxComboBox->Disconnect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(AnimeRenamerFrame::onRegChoice), NULL, this);
+	resetButton->Disconnect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(AnimeRenamerFrame::onReset), NULL, this);
 }
 
 void AnimeRenamerFrame::OnQuit(wxCommandEvent& event)
@@ -149,6 +152,14 @@ void AnimeRenamerFrame::onRegChoice(wxCommandEvent& event)
 	}
 
 	pRenamer->setRegex(choiceString.ToStdString());
+}
+
+void AnimeRenamerFrame::onReset(wxCommandEvent& event)
+{
+	pRenamer.reset();
+	animeNameInput->Clear();
+	seasonInput->Clear();
+	wpath.clear();
 }
 
 void AnimeRenamerFrame::onPreviewButton(wxCommandEvent& event)

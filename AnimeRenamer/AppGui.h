@@ -44,6 +44,7 @@ private:
 	void onRenameClick(wxCommandEvent& event);
 	void onRestoreBackUp(wxCommandEvent& event);
 	void onRegChoice(wxCommandEvent& event);
+	void onReset(wxCommandEvent& event);
 	bool previewClicked = false;
 	wxString wpath;
 	std::unique_ptr<AnimeRenamemer> pRenamer;
@@ -60,6 +61,7 @@ protected:
 	wxButton* previewButton;
 	wxButton* renameButton;
 	wxButton* recoverButton;
+	wxButton* resetButton;
 	wxDataViewListCtrl* renamePreview;
 
 	wxBoxSizer* leftHorizontalSizer;

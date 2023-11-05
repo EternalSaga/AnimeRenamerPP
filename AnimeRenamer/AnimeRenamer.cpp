@@ -7,6 +7,8 @@
 #include <fstream>
 #include <algorithm>
 #include <boost/locale.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/regex/icu.hpp>
 using json = nlohmann::json;
 namespace ranges = std::ranges;
 namespace view = std::views;
@@ -46,7 +48,7 @@ std::string filterSmatch2Episode(const boost::smatch& episode) {
 	std::string result;
 	for (const auto& re : episode)
 	{
-		if (re.str() != "")
+		if (re.matched)
 		{
 			result = re.str();
 			break;
@@ -58,6 +60,14 @@ std::string filterSmatch2Episode(const boost::smatch& episode) {
 		result = to_be_delete;
 	}
 	return result;
+}
+
+std::string preprocess(std::string s) {
+	boost::erase_all(s, "1080P");
+	boost::erase_all(s, "1080p");
+	boost::erase_all(s, "720p");
+	boost::erase_all(s, "720P");
+	return s;
 }
 
 std::vector<std::pair<fs::path, fs::path>> AnimeRenamemer::getPreviewResult()
@@ -84,7 +94,8 @@ void AnimeRenamemer::setRegex(const std::string& regRule)
 		reg = boost::regex{ R"((?<=S\d{2}E)(\d{2}))" };
 	}
 	else if (regRule == "集数") {
-		reg = boost::regex{ R"((?<=\s)\d{1,3}(?=\s))" };
+		//reg = boost::regex{ R"((?<=\s)\d{1,3}(?=\s)|(?<=第)\d{1,3}(?=话))" };\b\d{1,3}\b
+		reg = boost::regex{ R"(\b\d{1,3}\b)" };
 	}
 	else {
 		reg = Resources::presetAnimeRegxes;
@@ -99,7 +110,8 @@ void AnimeRenamemer::searchAnime()
 		[this](const fs::path& p) {
 			std::string fileName;
 			if (p.has_filename()) {
-				fileName = gbk2u8(p.filename().string());
+				fileName = preprocess( gbk2u8(p.filename().string()));
+				//fileName = preprocess(p.filename().string());
 			}
 			boost::smatch episodes;
 			boost::regex_search(fileName, episodes, reg);
@@ -118,6 +130,8 @@ void AnimeRenamemer::searchAnime()
 		}
 }
 
+
+
 void AnimeRenamemer::searchSubtitles()
 {
 	const auto oldSubtitleNames = GetAllFiles(this->animeRootPath, Resources::subtitleSuffix);
@@ -125,9 +139,10 @@ void AnimeRenamemer::searchSubtitles()
 		[this](const fs::path& p) {
 			std::string fileName;
 			if (p.has_filename()) {
-				fileName = p.filename().string();
+				fileName = preprocess(p.filename().string());
 			}
 			boost::smatch episodes;
+
 			boost::regex_search(fileName, episodes, reg);
 			const auto ep = filterSmatch2Episode(episodes);
 			std::string languageCode;
@@ -135,11 +150,10 @@ void AnimeRenamemer::searchSubtitles()
 			{
 				boost::smatch foundLanguage;
 				boost::regex_search(fileName, foundLanguage, pair.second);
-				if (!foundLanguage.empty())
+				for (const auto& subm:foundLanguage)
 				{
-					languageCode = filterSmatch2Episode(foundLanguage);
-					if (!languageCode.empty())
-					{
+					if (subm.matched) {
+						languageCode = pair.first;
 						break;
 					}
 				}
@@ -180,7 +194,7 @@ void AnimeRenamemer::checkResultValidation() const
 		if (previewsSize == subtileSet.size()) {
 			throw std::runtime_error(fmt::format("新字幕有重名，请检查字幕名：{}:{}", subtitleName.first.filename().generic_string(), subtitleName.second.filename().generic_string()));
 		}
-		previewsSize = animeNameSet.size();
+		previewsSize = subtileSet.size();
 	}
 
 }

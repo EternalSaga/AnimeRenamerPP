@@ -1,4 +1,4 @@
-# CMakeList.txt : CMake project for AnimeRenamer, include source and define
+﻿# CMakeList.txt : CMake project for AnimeRenamer, include source and define
 # project specific logic here.
 #
 
@@ -6,8 +6,7 @@
 add_executable (AnimeRenamer WIN32 "AnimeRenamer.cpp" "AnimeRenamer.h" "GetFiles.h" "GetFiles.cpp" "main.cpp" "AppGui.h" "AppGui.cpp")
 
 
-find_package(spdlog CONFIG REQUIRED)
-target_link_libraries(AnimeRenamer PRIVATE spdlog::spdlog)
+
 find_package(Boost REQUIRED COMPONENTS filesystem regex locale)
 
 target_link_libraries(AnimeRenamer PRIVATE Boost::filesystem Boost::regex Boost::locale)
