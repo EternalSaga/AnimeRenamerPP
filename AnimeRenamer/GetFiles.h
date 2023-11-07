@@ -1,8 +1,8 @@
-#pragma once
-#include <boost/filesystem.hpp>
+﻿#pragma once
+#include <filesystem>
 #include <vector>
 #include <string>
-#include <boost/locale.hpp>
-namespace fs = boost::filesystem;
+
+namespace fs = std::filesystem;
 
 std::vector<fs::path> GetAllFiles(const fs::path& path, const std::vector<std::string>& extensions);

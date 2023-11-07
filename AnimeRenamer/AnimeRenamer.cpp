@@ -6,16 +6,16 @@
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <algorithm>
-#include <boost/locale.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/regex/icu.hpp>
+#include <set>
+
 using json = nlohmann::json;
 namespace ranges = std::ranges;
 namespace view = std::views;
-const std::map<std::string, boost::regex> Resources::presetLanguageMap = {
-		{"sc", boost::regex(R"(SC|sc|CHS|chs)")},
-		{"tc",boost::regex(R"(TC|tc|CHT|cht)")},
-		{"jap",boost::regex(R"(jap|jpn)")}
+const std::map<std::string, icu::UnicodeString> Resources::presetLanguageMap = {
+		{"sc", R"(SC|sc|CHS|chs)"},
+		{"tc",R"(TC|tc|CHT|cht)"},
+		{"jap",R"(jap|jpn)"}
 };
 const std::string to_be_delete = "to_be_delete";
 const std::vector<std::string> Resources::videoSuffix{ ".mp4", ".mkv", ".rmvb", ".avi", ".flv", ".mov", ".wmv", ".mpeg", ".m4v" };
@@ -24,51 +24,43 @@ const std::vector<std::string> Resources::subtitleSuffix{ ".srt",".ass",".sub","
 //以[开头,以]结尾，且中括号都不包含，括号中间是SP+多个数字
 //1-3个数字
 //S01E01格式
-const boost::regex Resources::presetAnimeRegxes{
-	R"((?<=\[)\d{1,3}(?<!\])|(?<=\[)(SP\d?)(?=\])|\b(\d{1,3})\b|(?<=S\d{2}E)(\d{2}))"
+const icu::UnicodeString Resources::presetAnimeRegxes = R"((?<=\[)\d{1,3}(?<!\])|(?<=\[)(SP\d?)(?=\])|\b(\d{1,3})\b|(?<=S\d{2}E)(\d{2}))"
 	//R"((?<=S\d{2}E)(\d{2}))"
-};
+;
 
 AnimeRenamemer::AnimeRenamemer(const fs::path& animePath, const std::string& season, const std::string& animeName) :
 	animeRootPath(animePath),
 	season(season),
 	animeName(animeName) {
-	reg = Resources::presetAnimeRegxes;
+	reg = nullptr;
 }
-
-std::string gbk2u8(const std::string gbkStr) {
-	return boost::locale::conv::between(gbkStr, "UTF-8", "GBK");;
+icu::UnicodeString u8str2icu(const std::u8string& str) {
+	return icu::UnicodeString::fromUTF8(std::string(str.begin(), str.end()));
 }
-
-std::string u82gtk(const std::string u8Str) {
-	return boost::locale::conv::between(u8Str, "GBK", "UTF-8");;
-}
-
-std::string filterSmatch2Episode(const boost::smatch& episode) {
-	std::string result;
-	for (const auto& re : episode)
-	{
-		if (re.matched)
+std::string findFirstMatch(const icu::UnicodeString& ustrNeedMatch,icu::RegexMatcher* matcher) {
+	UErrorCode status = U_ZERO_ERROR;
+	std::string u8str;
+	matcher->reset(ustrNeedMatch);
+	if (matcher->find()) {
+		int start = matcher->start(status);
+		if (U_FAILURE(status))
 		{
-			result = re.str();
-			break;
+			throw status;
 		}
-
+		int end = matcher->end(status);
+		if (U_FAILURE(status))
+		{
+			throw status;
+		}
+		icu::UnicodeString m;
+		ustrNeedMatch.extractBetween(start, end, m);
+		
+		m.toUTF8String(u8str);
+		
 	}
-	if (episode.empty())
-	{
-		result = to_be_delete;
-	}
-	return result;
+	return u8str;
 }
 
-std::string preprocess(std::string s) {
-	boost::erase_all(s, "1080P");
-	boost::erase_all(s, "1080p");
-	boost::erase_all(s, "720p");
-	boost::erase_all(s, "720P");
-	return s;
-}
 
 std::vector<std::pair<fs::path, fs::path>> AnimeRenamemer::getPreviewResult()
 {
@@ -78,8 +70,7 @@ std::vector<std::pair<fs::path, fs::path>> AnimeRenamemer::getPreviewResult()
 		searchSubtitles();
 	}
 	checkResultValidation();
-	std::vector<std::pair<fs::path, fs::path>> animeNameSubList;
-	animeNameSubList.insert(animeNameSubList.end(), animePaths_old_new.begin(), animePaths_old_new.end());
+	std::vector<std::pair<fs::path, fs::path>> animeNameSubList = animePaths_old_new;
 	animeNameSubList.insert(animeNameSubList.end(), subtitlesPaths_old_new.begin(), subtitlesPaths_old_new.end());
 	return animeNameSubList;
 }
@@ -88,17 +79,21 @@ void AnimeRenamemer::setRegex(const std::string& regRule)
 {
 	if (regRule == "[集数]")
 	{
-		reg = boost::regex{ R"((?<=\[)\d{1,3}\.?5?(?=v??2??\]))" };
+		reg = std::make_unique<icu::RegexMatcher>( R"((?<=\[)\d{1,3}\.?5?(?=v??2??\])|(?<=\[)SP\d?\d?(?=v??2??\]))",0,this->icuStatus);
 	}
 	else if (regRule == "S季E集数") {
-		reg = boost::regex{ R"((?<=S\d{2}E)(\d{2}))" };
+		reg = std::make_unique<icu::RegexMatcher>( R"((?<=S\d{2}E)(\d{2}))",0, this->icuStatus);
 	}
 	else if (regRule == "集数") {
-		//reg = boost::regex{ R"((?<=\s)\d{1,3}(?=\s)|(?<=第)\d{1,3}(?=话))" };\b\d{1,3}\b
-		reg = boost::regex{ R"(\b\d{1,3}\b)" };
+
+		reg = std::make_unique<icu::RegexMatcher>( R"((?<=第)\d{1,3}(?=话)|(?<=\s)\d{1,3}(?=\s)|\b\d{1,3}\b)",0, this->icuStatus);
 	}
 	else {
-		reg = Resources::presetAnimeRegxes;
+		reg = std::make_unique<icu::RegexMatcher>(Resources::presetAnimeRegxes,0, this->icuStatus);
+	}
+	if (U_FAILURE(icuStatus))
+	{
+		throw icuStatus;
 	}
 }
 void AnimeRenamemer::searchAnime()
@@ -108,21 +103,20 @@ void AnimeRenamemer::searchAnime()
 	);
 	auto animesPathView = oldAnimeNames | view::transform(
 		[this](const fs::path& p) {
-			std::string fileName;
+			std::u8string fileName;
 			if (p.has_filename()) {
-				fileName = preprocess( gbk2u8(p.filename().string()));
-				//fileName = preprocess(p.filename().string());
+				fileName = p.filename().u8string();				//fileName = preprocess(p.filename().string());
 			}
-			boost::smatch episodes;
-			boost::regex_search(fileName, episodes, reg);
-			const auto ep = filterSmatch2Episode(episodes);
+
+			const auto icuFilename = u8str2icu(fileName);
+			
+			const auto ep = findFirstMatch(icuFilename,reg.get());
 
 			const auto newFileName = fmt::format("{}-S{}E{}{}", animeName, season, ep, p.extension().string());
 			const auto newFilePath = p.parent_path() / fs::path(newFileName);
 			return std::pair<fs::path, fs::path>{p, newFilePath};
 		}) | view::filter([](const std::pair<fs::path, fs::path>& old_new) {
-			return old_new.second.string().find(to_be_delete);
-
+				return old_new.second.string().find(to_be_delete);
 			});
 		for (const auto& v : animesPathView)
 		{
@@ -137,25 +131,26 @@ void AnimeRenamemer::searchSubtitles()
 	const auto oldSubtitleNames = GetAllFiles(this->animeRootPath, Resources::subtitleSuffix);
 	auto subtitlePathView = oldSubtitleNames | view::transform(
 		[this](const fs::path& p) {
-			std::string fileName;
+			std::u8string fileName;
 			if (p.has_filename()) {
-				fileName = preprocess(p.filename().string());
+				fileName = p.filename().u8string();
 			}
-			boost::smatch episodes;
+			const auto icuFilename = u8str2icu(fileName);
 
-			boost::regex_search(fileName, episodes, reg);
-			const auto ep = filterSmatch2Episode(episodes);
+			const auto ep = findFirstMatch(icuFilename, reg.get());
+
 			std::string languageCode;
-			for (const auto& pair : Resources::presetLanguageMap)
+			for (auto pair : Resources::presetLanguageMap)
 			{
-				boost::smatch foundLanguage;
-				boost::regex_search(fileName, foundLanguage, pair.second);
-				for (const auto& subm:foundLanguage)
+				icu::RegexMatcher matcher(pair.second, icuFilename,0, this->icuStatus);
+				if (U_FAILURE(icuStatus))
 				{
-					if (subm.matched) {
-						languageCode = pair.first;
-						break;
-					}
+					throw icuStatus;
+				}
+				if (matcher.find())
+				{
+					languageCode = pair.first;
+					break;
 				}
 			}
 			const auto newFileName = fmt::format("{}-S{}E{}.{}{}", animeName, season, ep, languageCode, p.extension().string());
@@ -219,10 +214,10 @@ void AnimeRenamemer::backUpPathes() {
 
 	for (const auto& path : pathes)
 	{
-		auto u8oldPath = boost::locale::conv::between(path.first.string(), "UTF-8", "GBK");
-		auto u8newPath = boost::locale::conv::between(path.second.string(), "UTF-8", "GBK");
-		j["oldPath"].push_back(u8oldPath);
-		j["newPath"].push_back(u8newPath);
+		const auto u8old = path.first.u8string();
+		const auto u8new = path.second.u8string();
+		j["oldPath"].push_back(std::string(u8old.begin(), u8old.end()));
+		j["newPath"].push_back(std::string(u8new.begin(), u8new.end()));
 	}
 	const std::string s = j.dump();
 	std::fstream f(writePath.string(), std::ios::out | std::ios::trunc);//只写打开，抛弃所有文件
@@ -247,12 +242,12 @@ void AnimeRenamemer::restoreBackup(const fs::path& animePath) {
 		std::map<std::string, std::vector<std::string>> map = data.get<std::map<std::string, std::vector<std::string>>>();
 		for (size_t i = 0; i < data["oldPath"].size(); i++)
 		{
-			auto gbkOldPath = boost::locale::conv::between(data["oldPath"][i], "GBK", "UTF-8");
-			auto gbkNewPath = boost::locale::conv::between(data["newPath"][i], "GBK", "UTF-8");
-
-
-			fs::path oldPath(gbkOldPath);
-			fs::path newPath(gbkNewPath);
+			std::string oldPathStr = data["oldPath"][i];
+			std::string newPathStr = data["newPath"][i];
+			std::u8string oldu8(oldPathStr.begin(), oldPathStr.end());
+			std::u8string newu8(newPathStr.begin(), newPathStr.end());
+			fs::path oldPath(oldu8);
+			fs::path newPath(newu8);
 			oldPath = oldPath.make_preferred();
 			newPath = newPath.make_preferred();
 			if (fs::exists(newPath))

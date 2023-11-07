@@ -9,17 +9,18 @@
 #include "GetFiles.h"
 #include <array>
 #include <map>
-#include <boost/regex.hpp>
+#include <unicode/regex.h>
 #include <fmt/format.h>
+
 using namespace std::string_literals;
 struct Resources
 {
 	const static std::vector<std::string> videoSuffix;
 	const static std::vector<std::string> subtitleSuffix;
 	
-	const static std::map<std::string, boost::regex> presetLanguageMap;
+	const static std::map<std::string, icu::UnicodeString> presetLanguageMap;
 	//用于集数提取
-	const static boost::regex presetAnimeRegxes;
+	const static icu::UnicodeString presetAnimeRegxes;
 private:
 	
 };
@@ -42,5 +43,7 @@ private:
 	void checkResultValidation() const;
 	std::vector<std::pair<fs::path, fs::path>> animePaths_old_new;
 	std::vector<std::pair<fs::path, fs::path>> subtitlesPaths_old_new;
-	boost::regex reg;
+	std::unique_ptr<icu::RegexMatcher> reg;
+
+	UErrorCode icuStatus;
 };

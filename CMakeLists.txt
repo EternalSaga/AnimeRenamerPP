@@ -13,3 +13,4 @@ project ("AnimeRenamer")
 
 # Include sub-projects.
 add_subdirectory ("AnimeRenamer")
+# add_subdirectory ("TestU8Regex")

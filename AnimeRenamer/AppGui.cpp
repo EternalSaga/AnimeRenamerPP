@@ -133,7 +133,7 @@ void AnimeRenamerFrame::onRestoreBackUp(wxCommandEvent& event)
 	}
 	if (this->wpath != "")
 	{
-		pRenamer->restoreBackup(fs::path(this->wpath));
+		pRenamer->restoreBackup(fs::path(this->wpath.ToStdWstring()));
 	}
 }
 
@@ -144,7 +144,7 @@ void AnimeRenamerFrame::onRegChoice(wxCommandEvent& event)
 	const auto& animeName = animeNameInput->GetLineText(0);
 	if (!this->pRenamer && season != "" && animeName != "" && wpath != "")
 	{
-		this->pRenamer = std::make_unique<AnimeRenamemer>(fs::path(wpath), std::string(season), std::string(animeName));
+		this->pRenamer = std::make_unique<AnimeRenamemer>(fs::path(wpath.ToStdWstring()), std::string(season), std::string(animeName));
 	}
 	else
 	{
@@ -170,7 +170,7 @@ void AnimeRenamerFrame::onPreviewButton(wxCommandEvent& event)
 	const auto& animeName = animeNameInput->GetLineText(0);
 	if (!this->pRenamer && season != "" && animeName != "" && wpath != "")
 	{
-		this->pRenamer = std::make_unique<AnimeRenamemer>(fs::path(wpath), std::string(season), std::string(animeName));
+		this->pRenamer = std::make_unique<AnimeRenamemer>(fs::path(wpath.ToStdString()), std::string(season), std::string(animeName));
 	}
 	if (this->pRenamer)
 	{
@@ -191,8 +191,8 @@ void AnimeRenamerFrame::onPreviewButton(wxCommandEvent& event)
 		for (const auto& path_old_new : previewList)
 		{
 			wxVector<wxVariant> data;
-			data.push_back(wxString(path_old_new.first.filename().string()));
-			data.push_back(wxString(path_old_new.second.filename().string()));
+			data.push_back(wxString(path_old_new.first.filename().generic_string()));
+			data.push_back(wxString(path_old_new.second.filename().generic_string()));
 			renamePreview->AppendItem(data);
 		}
 

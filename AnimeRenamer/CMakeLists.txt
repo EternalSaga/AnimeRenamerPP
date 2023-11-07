@@ -7,9 +7,10 @@ add_executable (AnimeRenamer WIN32 "AnimeRenamer.cpp" "AnimeRenamer.h" "GetFiles
 
 
 
-find_package(Boost REQUIRED COMPONENTS filesystem regex locale)
-
-target_link_libraries(AnimeRenamer PRIVATE Boost::filesystem Boost::regex Boost::locale)
+find_package(Boost REQUIRED)
+find_package(ICU REQUIRED COMPONENTS uc dt i18n)
+target_include_directories(AnimeRenamer PRIVATE ${ICU_INCLUDE_DIRS})
+target_link_libraries(AnimeRenamer PRIVATE Boost::boost ${ICU_LIBRARIES})
 
 find_package(fmt CONFIG REQUIRED)
 target_link_libraries(AnimeRenamer PRIVATE fmt::fmt)
