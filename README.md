@@ -12,7 +12,7 @@
 
 使用第三方库有：
 
-* boost：filesystem，locale，regex
+* icu（为了unicode的正则表达式）
 * libfmt
 * wxWidgets
 * nolhmann json
@@ -26,6 +26,7 @@
 * [X] 从备份文件恢复文件名
 * [ ] 完全不防呆
 * [ ] 甚至不能连续打开多个文件夹进行重命名
+* [ ] 当文件名里有某些奇怪字符的时候可能会造成wxwidgets崩溃，原因未知，我只见过一次
 
 ## 效果图
 
