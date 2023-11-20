@@ -2,131 +2,87 @@
 
 #include <wx/dirdlg.h>
 
-AnimeRenamerFrame::AnimeRenamerFrame(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(parent, id, title, pos, size, style), pRenamer(nullptr)
+AnimeRenamerFrame::AnimeRenamerFrame(wxWindow* parent) : GuiBase(parent),pRenamer(nullptr)
 {
-	this->SetSizeHints(wxDefaultSize, wxDefaultSize);
-
-
-
-	MainMenubar = new wxMenuBar(0);
-	m_menu = new wxMenu();
-	wxMenuItem* fileOpen;
-	fileOpen = new wxMenuItem(m_menu, wxID_ANY, wxString(wxT("打开")), wxEmptyString, wxITEM_NORMAL);
-	m_menu->Append(fileOpen);
-
-	MainMenubar->Append(m_menu, wxT("菜单"));
-
-	this->SetMenuBar(MainMenubar);
-	
-	 
-	leftHorizontalSizer = new wxBoxSizer(wxVERTICAL);
-	
-
-	animeNameInput = new wxTextCtrl(this, wxID_ANY,"", wxDefaultPosition, wxDefaultSize, 0);
 	animeNameInput->SetHint(wxT("输入动画名"));
-	animeNameInput->SetWindowStyleFlag(wxTE_PROCESS_ENTER);
-
-	leftHorizontalSizer->Add(animeNameInput, 0, wxALL, 5);
-	
-	
-	seasonInput = new wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0);
-	seasonInput->SetWindowStyleFlag(wxTE_PROCESS_ENTER);
 	seasonInput->SetHint(wxT("输入季数"));
-	leftHorizontalSizer->Add(seasonInput, 0, wxALL, 5);
-
-
-	regxComboBox = new wxComboBox(this, wxID_ANY, wxT("正则选择器"), wxDefaultPosition, wxSize(100, -1), 0, NULL, 0);
-	regxComboBox->Append(wxT("[集数]"));
-	regxComboBox->Append(wxT("S季E集数"));
-	regxComboBox->Append(wxT("集数"));
-	regxComboBox->Append(wxT("默认"));
-	regxComboBox->Append(wxEmptyString);
-	leftHorizontalSizer->Add(regxComboBox, 0, wxALL, 5);
-
-	genBackup = new wxCheckBox(this, wxID_ANY, wxT("生成文件名备份"), wxDefaultPosition, wxDefaultSize, 0);
-	genBackup->SetValue(true);
-	leftHorizontalSizer->Add(genBackup, 0, wxALL, 5);
-
-	previewButton = new wxButton(this, wxID_ANY, wxT("预览"), wxDefaultPosition, wxDefaultSize, 0);
-	leftHorizontalSizer->Add(previewButton, 0, wxALL, 5);
-
-	
-
-	renameButton = new wxButton(this, wxID_ANY, wxT("重命名"), wxDefaultPosition, wxDefaultSize, 0);
-	leftHorizontalSizer->Add(renameButton, 0, wxALL, 5);
-
-	recoverButton = new wxButton(this, wxID_ANY, wxT("从备份恢复"), wxDefaultPosition, wxDefaultSize, 0);
-	leftHorizontalSizer->Add(recoverButton, 0, wxALL, 5);
-
-	resetButton = new wxButton(this, wxID_ANY, wxT("重置状态"), wxDefaultPosition, wxDefaultSize, 0);
-	leftHorizontalSizer->Add(resetButton, 0, wxALL, 5);
-
-	renamePreview = new wxDataViewListCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(1280, 720), 0);
 	renamePreview->AppendTextColumn(wxT("原始命名"));
 	renamePreview->AppendTextColumn(wxT("新命名"));
-	leftHorizontalSizer->Add(renamePreview, 0, wxEXPAND, 5);
-	
-
-
-	this->SetSizer(leftHorizontalSizer);
-	this->Layout();
-
-	this->Centre(wxBOTH);
-	m_menu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(AnimeRenamerFrame::onFileOpen), this, fileOpen->GetId());
-
-	previewButton->Connect(wxEVT_LEFT_DOWN, wxCommandEventHandler(AnimeRenamerFrame::onPreviewButton), NULL, this);
-	renameButton->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(AnimeRenamerFrame::onRenameClick), NULL, this);
-	recoverButton->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(AnimeRenamerFrame::onRestoreBackUp), NULL, this);
-	regxComboBox->Connect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(AnimeRenamerFrame::onRegChoice), NULL, this);
-	resetButton->Connect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(AnimeRenamerFrame::onReset), NULL, this);
+	this->pRenamer = std::make_unique<AnimeRenamemer>();
 }
 
 AnimeRenamerFrame::~AnimeRenamerFrame()
 {
-	recoverButton->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(AnimeRenamerFrame::onRestoreBackUp), NULL, this);
-	previewButton->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(AnimeRenamerFrame::onPreviewButton), NULL, this);
-	renameButton->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(AnimeRenamerFrame::onRenameClick), NULL, this);
-	regxComboBox->Disconnect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(AnimeRenamerFrame::onRegChoice), NULL, this);
-	resetButton->Disconnect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(AnimeRenamerFrame::onReset), NULL, this);
+
 }
 
-void AnimeRenamerFrame::OnQuit(wxCommandEvent& event)
-{
-	wxWindowBase::Close(true);
-}
 
-void AnimeRenamerFrame::OnAbout(wxCommandEvent& event)
-{
-}
-
-void AnimeRenamerFrame::OnQuitUpdate(wxUpdateUIEvent& event)
-{
-}
 
 void AnimeRenamerFrame::onFileOpen(wxCommandEvent& event)
 {
-	if (this->pRenamer)
-	{
-		this->pRenamer.reset();
-	}
+
 	wxDirDialog dlg(nullptr, wxT("选择你的番剧文件夹"), "", wxDD_DEFAULT_STYLE | wxDD_DIR_MUST_EXIST);
 	if (dlg.ShowModal() == wxID_OK)
 	{
 		wpath = dlg.GetPath();
+		this->pRenamer->setPath(wpath.ToStdString());
+	}
+
+}
+
+void AnimeRenamerFrame::hintInputAnime(wxMouseEvent& event)
+{
+	if (event.Entering())
+	{
+		this->hint->SetLabelText(wxT("请输入动画名"));
+		this->hint->Show();
+	}
+
+}
+
+void AnimeRenamerFrame::hintInputSeason(wxMouseEvent& event)
+{
+	if (event.Entering())
+	{
+		this->hint->SetLabelText(wxT("请输入季数"));
+		this->hint->Show();
+	}
+}
+
+void AnimeRenamerFrame::onLeaveSeason(wxMouseEvent& event)
+{
+	if (event.Leaving())
+	{
+		this->hint->Hide();
 	}
 }
 
 void AnimeRenamerFrame::onRenameClick(wxCommandEvent& event) {
-	if (!pRenamer) {
-		return;
-	}
+
 	if (this->genBackup->IsChecked()) {
 		this->pRenamer->backUpPathes();
 	}
 	this->pRenamer->doRename();
 }
 
-void AnimeRenamerFrame::onRestoreBackUp(wxCommandEvent& event)
+void AnimeRenamerFrame::hintRename(wxMouseEvent& event)
+{
+	if (event.Entering())
+	{
+		this->hint->SetLabelText(wxT("执行重名操作，需要先预览"));
+		this->hint->Show();
+	}
+}
+
+void AnimeRenamerFrame::onLeaveRename(wxMouseEvent& event)
+{
+	if (event.Leaving())
+	{
+		this->hint->Hide();
+	}
+}
+
+void AnimeRenamerFrame::recoverBackup(wxCommandEvent& event)
 {
 	if (!pRenamer) {
 		return;
@@ -137,29 +93,78 @@ void AnimeRenamerFrame::onRestoreBackUp(wxCommandEvent& event)
 	}
 }
 
+void AnimeRenamerFrame::hintRecover(wxMouseEvent& event)
+{
+	if (event.Entering())
+	{
+		this->hint->SetLabelText(wxT("从备份文件中恢复原始命名，注意备份文件中的路径"));
+		this->hint->Show();
+	}
+}
+
+void AnimeRenamerFrame::onLeaveRecover(wxMouseEvent& event)
+{
+	if (event.Leaving())
+	{
+		this->hint->Hide();
+	}
+}
+
 void AnimeRenamerFrame::onRegChoice(wxCommandEvent& event)
 {
 	const auto& choiceString = event.GetString();
-	const auto& season = seasonInput->GetLineText(0);
-	const auto& animeName = animeNameInput->GetLineText(0);
-	if (!this->pRenamer && season != "" && animeName != "" && wpath != "")
-	{
-		this->pRenamer = std::make_unique<AnimeRenamemer>(fs::path(wpath.ToStdWstring()), std::string(season), std::string(animeName));
-	}
-	else
-	{
-		wxMessageBox("请填写动画信息");
-	}
+
 
 	pRenamer->setRegex(choiceString.ToStdString());
 }
 
-void AnimeRenamerFrame::onReset(wxCommandEvent& event)
+void AnimeRenamerFrame::hintRegex(wxMouseEvent& event)
 {
-	pRenamer.reset();
+	if (event.Entering())
+	{
+		this->hint->SetLabelText(wxT("必须选择一个正则表达式"));
+		this->hint->Show();
+	}
+}
+
+void AnimeRenamerFrame::onLeaveRegex(wxMouseEvent& event)
+{
+	if (event.Leaving())
+	{
+		this->hint->Hide();
+	}
+}
+
+void AnimeRenamerFrame::onResetClick(wxCommandEvent& event)
+{
 	animeNameInput->Clear();
 	seasonInput->Clear();
 	wpath.clear();
+}
+
+void AnimeRenamerFrame::onLeaveReset(wxMouseEvent& event)
+{
+	if (event.Leaving())
+	{
+		this->hint->Hide();
+	}
+}
+
+void AnimeRenamerFrame::hintReset(wxMouseEvent& event)
+{
+	if (event.Entering())
+	{
+		this->hint->SetLabelText(wxT("重置全部状态"));
+		this->hint->Show();
+	}
+}
+
+void AnimeRenamerFrame::onLeaveAnimeInput(wxMouseEvent& event)
+{
+	if (event.Leaving())
+	{
+		this->hint->Hide();
+	}
 }
 
 void AnimeRenamerFrame::onPreviewButton(wxCommandEvent& event)
@@ -168,53 +173,62 @@ void AnimeRenamerFrame::onPreviewButton(wxCommandEvent& event)
 
 	const auto& season = seasonInput->GetLineText(0);
 	const auto& animeName = animeNameInput->GetLineText(0);
-	if (!this->pRenamer && season != "" && animeName != "" && wpath != "")
+	this->pRenamer->setSeason(season.ToStdString());
+	this->pRenamer->setAnimeName(animeName.ToStdString());
+	//this->pRenamer->setPath(fs::path(this->wpath.ToStdString()));
+	std::vector<std::pair<fs::path, fs::path>> previewList;
+	try
 	{
-		this->pRenamer = std::make_unique<AnimeRenamemer>(fs::path(wpath.ToStdString()), std::string(season), std::string(animeName));
+		previewList = pRenamer->getPreviewResult();
 	}
-	if (this->pRenamer)
+	catch (const std::exception& e)
 	{
-		std::vector<std::pair<fs::path, fs::path>> previewList;
-		try
-		{
-			previewList = pRenamer->getPreviewResult();
-		}
-		catch (const std::exception& e)
-		{
-			wxMessageBox(e.what());
-			this->pRenamer.reset();
-			return;
-		}
-		
-
-
-		for (const auto& path_old_new : previewList)
-		{
-			wxVector<wxVariant> data;
-			data.push_back(wxString(path_old_new.first.filename().generic_string()));
-			data.push_back(wxString(path_old_new.second.filename().generic_string()));
-			renamePreview->AppendItem(data);
-		}
-
-		leftHorizontalSizer->FitInside(renamePreview);
-
+		wxMessageBox(e.what());
+		return;
 	}
 
 
+
+	for (const auto& path_old_new : previewList)
+	{
+		wxVector<wxVariant> data;
+		data.push_back(wxString(path_old_new.first.filename().generic_string()));
+		data.push_back(wxString(path_old_new.second.filename().generic_string()));
+		renamePreview->AppendItem(data);
+	}
+
+
+
+}
+
+void AnimeRenamerFrame::hintPreview(wxMouseEvent& event)
+{
+	if (event.Entering())
+	{
+		this->hint->SetLabelText(wxT("执行重名的结果预览"));
+		this->hint->Show();
+	}
+}
+
+void AnimeRenamerFrame::onLeavePreview(wxMouseEvent& event)
+{
+	if (event.Leaving())
+	{
+		this->hint->Hide();
+	}
 }
 
 
 bool AnimeRenamerApp::OnInit()
 {
-
-	AnimeRenamerFrame* frame = new AnimeRenamerFrame(nullptr);
+	frame = new AnimeRenamerFrame(nullptr);
 	frame->Show();
 	return true;
 }
 
-AnimeRenamerApp::AnimeRenamerApp()
+AnimeRenamerApp::AnimeRenamerApp():frame(nullptr)
 {
- 
+	
 }
 
 AnimeRenamerApp::~AnimeRenamerApp()

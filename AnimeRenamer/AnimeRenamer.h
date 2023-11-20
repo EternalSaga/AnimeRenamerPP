@@ -11,7 +11,7 @@
 #include <map>
 #include <unicode/regex.h>
 #include <fmt/format.h>
-
+#include <cuchar>
 using namespace std::string_literals;
 struct Resources
 {
@@ -31,13 +31,18 @@ public:
 	void doRename();
 	void backUpPathes();
 	void restoreBackup(const fs::path& animePath);
+
 	void setRegex(const std::string& regRule);
+	void setPath(fs::path videoPath);
+	void setAnimeName(const std::string& animeName);
+	void setSeason(const std::string& season);
+
 	std::vector<std::pair<fs::path, fs::path>> getPreviewResult();
-	AnimeRenamemer(const fs::path& animePath, const std::string& season, const std::string& animeName);
+	AnimeRenamemer();
 private:
-	const fs::path animeRootPath;
-	const std::string season;
-	const std::string animeName;
+	fs::path animeRootPath;
+	std::string season;
+	std::string animeName;
 	void searchAnime();
 	void searchSubtitles();
 	void checkResultValidation() const;
@@ -46,4 +51,5 @@ private:
 	std::unique_ptr<icu::RegexMatcher> reg;
 
 	UErrorCode icuStatus;
+	
 };

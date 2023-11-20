@@ -28,11 +28,23 @@ const icu::UnicodeString Resources::presetAnimeRegxes = R"((?<=\[)\d{1,3}(?<!\])
 	//R"((?<=S\d{2}E)(\d{2}))"
 ;
 
-AnimeRenamemer::AnimeRenamemer(const fs::path& animePath, const std::string& season, const std::string& animeName) :
-	animeRootPath(animePath),
-	season(season),
-	animeName(animeName) {
-	reg = nullptr;
+
+void AnimeRenamemer::setPath(fs::path videoPath) {
+	this->animeRootPath = videoPath;
+}
+void AnimeRenamemer::setAnimeName(const std::string& animeName) {
+	this->animeName = animeName;
+}
+void AnimeRenamemer::setSeason(const std::string& season) {
+	this->season = season;
+}
+
+AnimeRenamemer::AnimeRenamemer():reg(nullptr),
+animeRootPath{},
+season{},
+animeName{},
+icuStatus{ UErrorCode::U_ZERO_ERROR }
+{
 }
 icu::UnicodeString u8str2icu(const std::u8string& str) {
 	return icu::UnicodeString::fromUTF8(std::string(str.begin(), str.end()));
@@ -64,13 +76,25 @@ std::string findFirstMatch(const icu::UnicodeString& ustrNeedMatch,icu::RegexMat
 
 std::vector<std::pair<fs::path, fs::path>> AnimeRenamemer::getPreviewResult()
 {
-	if (animePaths_old_new.empty())
+	if (this->animeName.empty()||season.empty())
 	{
-		searchAnime();
-		searchSubtitles();
+		throw std::runtime_error("动画名或者季数为空");
 	}
+	if (!reg)
+	{
+		throw std::runtime_error("没有选择正则表达式");
+	}
+	if (!animePaths_old_new.empty())
+	{
+		animePaths_old_new.clear();
+		subtitlesPaths_old_new.clear();
+	}
+	
+	searchAnime();
+	searchSubtitles();
 	checkResultValidation();
-	std::vector<std::pair<fs::path, fs::path>> animeNameSubList = animePaths_old_new;
+	decltype(animePaths_old_new) animeNameSubList;
+	animeNameSubList.insert(animeNameSubList.end(),animePaths_old_new.begin(), animePaths_old_new.end());
 	animeNameSubList.insert(animeNameSubList.end(), subtitlesPaths_old_new.begin(), subtitlesPaths_old_new.end());
 	return animeNameSubList;
 }
@@ -142,7 +166,7 @@ void AnimeRenamemer::searchSubtitles()
 			std::string languageCode;
 			for (auto pair : Resources::presetLanguageMap)
 			{
-				icu::RegexMatcher matcher(pair.second, icuFilename,0, this->icuStatus);
+				icu::RegexMatcher matcher(pair.second, icuFilename, 0, this->icuStatus);
 				if (U_FAILURE(icuStatus))
 				{
 					throw icuStatus;
@@ -153,7 +177,15 @@ void AnimeRenamemer::searchSubtitles()
 					break;
 				}
 			}
-			const auto newFileName = fmt::format("{}-S{}E{}.{}{}", animeName, season, ep, languageCode, p.extension().string());
+			std::string newFileName;
+			if (languageCode.empty())
+			{
+				newFileName = fmt::format("{}-S{}E{}.{}", animeName, season, ep, p.extension().string());
+			}
+			else {
+				newFileName = fmt::format("{}-S{}E{}.{}{}", animeName, season, ep, languageCode, p.extension().string());
+			}
+			
 			const auto newFilePath = p.parent_path() / fs::path(newFileName);
 			return std::pair<fs::path, fs::path>{p, newFilePath};
 		}
@@ -203,6 +235,8 @@ void AnimeRenamemer::doRename() {
 	{
 		fs::rename(subs.first, subs.second);
 	}
+	animePaths_old_new.clear();
+	subtitlesPaths_old_new.clear();
 }
 
 

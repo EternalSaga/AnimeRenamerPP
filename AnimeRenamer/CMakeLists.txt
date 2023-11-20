@@ -3,7 +3,7 @@
 #
 
 # Add source to this project's executable.
-add_executable (AnimeRenamer WIN32 "AnimeRenamer.cpp" "AnimeRenamer.h" "GetFiles.h" "GetFiles.cpp" "main.cpp" "AppGui.h" "AppGui.cpp")
+add_executable (AnimeRenamer WIN32 "AnimeRenamer.cpp" "AnimeRenamer.h" "GetFiles.h" "GetFiles.cpp" "main.cpp" "AppGui.h" "AppGui.cpp" "GuiBase.cpp" "GuiBase.h")
 
 
 
