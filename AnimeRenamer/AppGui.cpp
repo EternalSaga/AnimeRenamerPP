@@ -192,8 +192,13 @@ void AnimeRenamerFrame::onPreviewButton(wxCommandEvent& event)
 	for (const auto& path_old_new : previewList)
 	{
 		wxVector<wxVariant> data;
-		data.push_back(wxString(path_old_new.first.filename().generic_string()));
-		data.push_back(wxString(path_old_new.second.filename().generic_string()));
+		const std::u8string oldu8 = path_old_new.first.filename().u8string();
+		const std::u8string newu8 = path_old_new.second.filename().u8string();
+		const std::string oldPath(oldu8.begin(), oldu8.end());
+		const std::string newPath(newu8.begin(), newu8.end());
+		
+		data.push_back(wxString::FromUTF8(oldPath));
+		data.push_back(wxString::FromUTF8(newPath));
 		renamePreview->AppendItem(data);
 	}
 

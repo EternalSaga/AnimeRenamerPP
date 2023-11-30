@@ -89,7 +89,7 @@ std::vector<std::pair<fs::path, fs::path>> AnimeRenamemer::getPreviewResult()
 		animePaths_old_new.clear();
 		subtitlesPaths_old_new.clear();
 	}
-	
+
 	searchAnime();
 	searchSubtitles();
 	checkResultValidation();

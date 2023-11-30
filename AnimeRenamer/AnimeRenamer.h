@@ -12,6 +12,7 @@
 #include <unicode/regex.h>
 #include <fmt/format.h>
 #include <cuchar>
+
 using namespace std::string_literals;
 struct Resources
 {
@@ -25,6 +26,7 @@ private:
 	
 };
 
+icu::UnicodeString u8str2icu(const std::u8string& str);
 class AnimeRenamemer {
 public:
 
